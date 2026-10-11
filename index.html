@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SMPM Documentation</title>
+<meta name="theme-color" content="#b91c1c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  :root {
+    --bg: #f5f5f4; --card: #ffffff; --text: #1c1917; --muted: #78716c;
+    --line: #e7e5e4; --accent: #b91c1c; --accent-soft: #fee2e2; --viewer: #44403c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0c0a09; --card: #1c1917; --text: #f5f5f4; --muted: #a8a29e;
+      --line: #292524; --accent: #ef4444; --accent-soft: #450a0a; --viewer: #000; }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--accent); color: #fff;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px; }
+  header h1 { margin: 0 0 10px; font-size: 1.15rem; }
+  #search { width: 100%; padding: 10px 12px; border: 0; border-radius: 10px; font-size: 1rem;
+    background: rgba(255,255,255,.95); color: #1c1917; }
+  #chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px; scrollbar-width: none; }
+  #chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    padding: 6px 12px; border-radius: 999px; font-size: .9rem; cursor: pointer; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  main { max-width: 820px; margin: 0 auto; padding: 0 16px 40px; }
+  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+    margin: 20px 4px 8px; }
+  .list { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    padding: 12px 14px; border: 0; border-top: 1px solid var(--line); background: none;
+    color: inherit; font: inherit; cursor: pointer; }
+  .item:first-child { border-top: 0; }
+  .item:hover, .item:focus-visible { background: var(--accent-soft); outline: none; }
+  .ico { flex: none; width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); font-size: .7rem; font-weight: 700; }
+  .meta { min-width: 0; flex: 1; }
+  .meta b { display: block; font-weight: 500; }
+  .meta small { color: var(--muted); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+
+  #viewer { position: fixed; inset: 0; z-index: 10; background: var(--viewer); display: none;
+    flex-direction: column; }
+  #viewer.open { display: flex; }
+  .bar { display: flex; align-items: center; gap: 6px; background: #1c1917; color: #fff;
+    padding: calc(8px + env(safe-area-inset-top)) 8px 8px; }
+  .bar button, .bar a { flex: none; background: none; border: 0; color: #fff; font-size: 1.2rem;
+    width: 40px; height: 40px; border-radius: 8px; cursor: pointer; text-decoration: none;
+    display: grid; place-items: center; }
+  .bar button:hover, .bar a:hover { background: rgba(255,255,255,.12); }
+  #vtitle { flex: 1; min-width: 0; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #vpages { font-size: .8rem; opacity: .7; flex: none; padding: 0 4px; }
+  #stage { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 12px 0;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .page { margin: 0 auto 12px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  .page canvas { display: block; width: 100%; height: 100%; }
+  #stage img { display: block; max-width: 100%; margin: 0 auto; }
+  #vmsg { color: #fff; text-align: center; padding: 40px 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SMPM Poulainville · Documentation</h1>
+  <input id="search" type="search" placeholder="Rechercher un document…" autocomplete="off">
+</header>
+<nav id="chips"></nav>
+<main id="content"></main>
+
+<div id="viewer" role="dialog" aria-modal="true">
+  <div class="bar">
+    <button id="vclose" title="Retour" aria-label="Retour">←</button>
+    <div id="vtitle"></div>
+    <span id="vpages"></span>
+    <button id="zout" title="Dézoomer" aria-label="Dézoomer">−</button>
+    <button id="zin" title="Zoomer" aria-label="Zoomer">+</button>
+    <a id="vdl" title="Télécharger" aria-label="Télécharger" download>⤓</a>
+  </div>
+  <div id="stage"></div>
+</div>
+
+<script src="docs.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const $ = s => document.querySelector(s);
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = n => n > 1e6 ? (n / 1e6).toFixed(1) + " Mo" : Math.round(n / 1e3) + " Ko";
+const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+let cat = "Tous";
+const cats = ["Tous", ...new Set(DOCS.map(d => d.category))];
+
+function renderChips() {
+  $("#chips").innerHTML = cats.map(c =>
+    `<button class="chip${c === cat ? " on" : ""}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+}
+$("#chips").onclick = e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  cat = b.dataset.c; renderChips(); renderList();
+};
+
+function renderList() {
+  const q = norm($("#search").value.trim());
+  const docs = DOCS.filter(d => (cat === "Tous" || d.category === cat) &&
+    (!q || norm(d.title + " " + d.category + " " + d.sub).includes(q)));
+  if (!docs.length) { $("#content").innerHTML = `<p class="empty">Aucun document trouvé.</p>`; return; }
+  const groups = {};
+  docs.forEach(d => (groups[d.category + (d.sub ? " · " + d.sub : "")] ||= []).push(d));
+  $("#content").innerHTML = Object.entries(groups).map(([g, list]) => `
+    <h2>${esc(g)}</h2>
+    <div class="list">${list.map(d => `
+      <button class="item" data-p="${esc(d.path)}">
+        <span class="ico">${d.type === "pdf" ? "PDF" : "IMG"}</span>
+        <span class="meta"><b>${esc(d.title)}</b><small>${fmt(d.size)}</small></span>
+      </button>`).join("")}
+    </div>`).join("");
+}
+$("#search").oninput = renderList;
+$("#content").onclick = e => {
+  const b = e.target.closest(".item");
+  if (b) location.hash = "doc=" + encodeURIComponent(b.dataset.p);
+};
+
+// ---------- Visionneuse intégrée ----------
+let pdf = null, scale = 1, token = 0, observer = null;
+
+async function openDoc(path) {
+  const d = DOCS.find(x => x.path === path);
+  if (!d) return closeDoc();
+  const my = ++token;
+  $("#viewer").classList.add("open");
+  document.body.style.overflow = "hidden";
+  $("#vtitle").textContent = d.title;
+  $("#vdl").href = d.path;
+  $("#vpages").textContent = "";
+  $("#stage").innerHTML = `<p id="vmsg">Chargement…</p>`;
+  $("#zin").hidden = $("#zout").hidden = d.type !== "pdf";
+  if (d.type === "image") {
+    $("#stage").innerHTML = `<img src="${esc(d.path)}" alt="${esc(d.title)}">`;
+    return;
+  }
+  try {
+    const doc = await pdfjsLib.getDocument(d.path).promise;
+    if (my !== token) return doc.destroy();
+    pdf = doc; scale = 1;
+    $("#vpages").textContent = pdf.numPages + " p.";
+    await layout();
+  } catch (err) {
+    if (my === token) $("#stage").innerHTML = `<p id="vmsg">Impossible d'ouvrir ce document.</p>`;
+  }
+}
+
+async function layout() {
+  const my = token, stage = $("#stage");
+  const width = Math.min(stage.clientWidth - 16, 1000) * scale;
+  const first = await pdf.getPage(1);
+  const vp0 = first.getViewport({ scale: 1 });
+  stage.innerHTML = "";
+  observer && observer.disconnect();
+  observer = new IntersectionObserver(entries => entries.forEach(en => {
+    if (en.isIntersecting && !en.target.dataset.done) { en.target.dataset.done = 1; drawPage(en.target, my); }
+  }), { root: stage, rootMargin: "800px 0px" });
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const div = document.createElement("div");
+    div.className = "page"; div.dataset.n = i;
+    div.style.width = width + "px";
+    div.style.height = (width * vp0.height / vp0.width) + "px";
+    stage.appendChild(div);
+    observer.observe(div);
+  }
+}
+
+async function drawPage(div, my) {
+  const page = await pdf.getPage(+div.dataset.n);
+  if (my !== token) return;
+  const w = parseFloat(div.style.width);
+  const vp1 = page.getViewport({ scale: 1 });
+  div.style.height = (w * vp1.height / vp1.width) + "px";
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const vp = page.getViewport({ scale: (w / vp1.width) * dpr });
+  const canvas = document.createElement("canvas");
+  canvas.width = vp.width; canvas.height = vp.height;
+  div.appendChild(canvas);
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+}
+
+function zoom(f) {
+  if (!pdf) return;
+  const stage = $("#stage"), ratio = stage.scrollTop / (stage.scrollHeight || 1);
+  scale = Math.min(4, Math.max(0.5, scale * f));
+  token++;
+  layout().then(() => { stage.scrollTop = ratio * stage.scrollHeight; });
+}
+$("#zin").onclick = () => zoom(1.25);
+$("#zout").onclick = () => zoom(0.8);
+
+function closeDoc() {
+  token++;
+  observer && observer.disconnect();
+  pdf && pdf.destroy(); pdf = null;
+  $("#viewer").classList.remove("open");
+  $("#stage").innerHTML = "";
+  document.body.style.overflow = "";
+}
+$("#vclose").onclick = () => history.length > 1 ? history.back() : (location.hash = "");
+
+function route() {
+  const m = location.hash.match(/^#doc=(.+)$/);
+  m ? openDoc(decodeURIComponent(m[1])) : closeDoc();
+}
+window.addEventListener("hashchange", route);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#viewer").classList.contains("open")) location.hash = ""; });
+
+renderChips(); renderList(); route();
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "SMPM Poulainville - Documentation",
+  "short_name": "SMPM Docs",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f4",
+  "theme_color": "#b91c1c",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

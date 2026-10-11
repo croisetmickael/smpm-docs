@@ -1,0 +1,9 @@
+{
+  "headers": [
+    { "source": "/docs/(.*)", "headers": [
+      { "key": "Cache-Control", "value": "public, max-age=86400" },
+      { "key": "Content-Disposition", "value": "inline" }
+    ]},
+    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}
